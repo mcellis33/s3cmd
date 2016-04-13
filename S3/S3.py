@@ -12,10 +12,10 @@ import time
 import errno
 import base64
 import mimetypes
+import urllib
 from xml.sax import saxutils
 from logging import debug, info, warning, error
 from stat import ST_SIZE
-from urllib import quote_plus
 
 try:
     from hashlib import md5
@@ -979,7 +979,7 @@ class S3(object):
         return accesslog, response
 
     ## Low level methods
-    def urlencode_string(self, string, urlencoding_mode = None):
+    def urlencode_string(self, string, urlencoding_mode = None, plus = True):
         if type(string) == unicode:
             string = string.encode("utf-8")
 
@@ -990,7 +990,14 @@ class S3(object):
             ## Don't do any pre-processing
             return string
 
-        encoded = quote_plus(string, safe="~/")
+        ## In query strings, spaces are encoded with plus signs, whereas in
+        ## URL paths spaces are encoded with %20. This function is used to
+        ## encode both, but mostly query strings, so quote_plus is the
+        ## default.
+        if plus:
+	        encoded = urllib.quote_plus(string, safe="~/")
+        else:
+	        encoded = urllib.quote(string, safe="~/")
         debug("String '%s' encoded to '%s'" % (string, encoded))
         return encoded
 
@@ -1007,7 +1014,7 @@ class S3(object):
         if bucket:
             resource['bucket'] = str(bucket)
             if object:
-                resource['uri'] = "/" + self.urlencode_string(object)
+                resource['uri'] = "/" + self.urlencode_string(object, plus = False)
         if extra:
             resource['uri'] += extra
 
